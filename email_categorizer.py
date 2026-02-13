@@ -1,6 +1,7 @@
 """
 Email Categorizer Module
-Uses OpenAI API to categorize emails with LLM memory for learning
+Uses OpenAI-compatible API to categorize emails with LLM memory for learning
+Supports both OpenAI API and local LLMs via OpenAI-compatible endpoints
 """
 import logging
 from typing import Dict, Optional
@@ -23,9 +24,23 @@ CATEGORIES = [
 
 
 class EmailCategorizer:
-    def __init__(self, api_key: str, model: str = "gpt-4o-mini"):
-        """Initialize email categorizer with OpenAI API key and LLM memory"""
-        self.client = OpenAI(api_key=api_key)
+    def __init__(self, api_key: str, model: str = "gpt-4o-mini", base_url: str = None):
+        """
+        Initialize email categorizer with OpenAI API key and LLM memory
+        
+        Args:
+            api_key: API key for the LLM service
+            model: Model name to use
+            base_url: Optional base URL for OpenAI-compatible API (for local LLMs)
+        """
+        # If base_url is provided, use it for local LLM
+        if base_url:
+            self.client = OpenAI(api_key=api_key, base_url=base_url)
+            logger.info(f"Using local LLM at {base_url}")
+        else:
+            self.client = OpenAI(api_key=api_key)
+            logger.info("Using OpenAI API")
+        
         self.model = model
         self.memory = LLMMemory()
     
@@ -97,8 +112,15 @@ Only respond with valid JSON, no additional text.
             )
             
             import json
-            result = json.loads(response.choices[0].message.content)
-            result['email_id'] = email['id']
+            import re
+            def extract_json(text: str) -> dict:
+                match = re.search(r'\{.*\}', text, re.DOTALL)
+                if not match:
+                    raise ValueError("No JSON object found")
+                return json.loads(match.group(0))
+
+            result = extract_json(response.choices[0].message.content)
+            result['email_id'] = email['id_str']
             result['subject'] = email['subject']
             result['from'] = email['from']
             
@@ -113,7 +135,7 @@ Only respond with valid JSON, no additional text.
         except Exception as e:
             logger.error(f"Failed to categorize email: {e}")
             return {
-                'email_id': email['id'],
+                'email_id': email['id_str'],
                 'subject': email['subject'],
                 'from': email['from'],
                 'category': 'other',

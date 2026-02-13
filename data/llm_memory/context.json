@@ -1,0 +1,14 @@
+{
+  "total_emails_processed": 368,
+  "total_newsletters_identified": 133,
+  "categories_learned": {
+    "invoice": 52,
+    "newsletter": 114,
+    "promotional": 43,
+    "notification": 98,
+    "other": 35,
+    "social": 14,
+    "spam": 12
+  },
+  "last_updated": "2026-02-13T17:40:08.390538"
+}
